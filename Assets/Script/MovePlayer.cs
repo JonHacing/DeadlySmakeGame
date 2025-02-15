@@ -3,29 +3,46 @@ using UnityEngine.Serialization;
 
 public class MovePlayer : MonoBehaviour
 {
+    private const bool V = true;
     [SerializeField]
     private Rigidbody2D rb;
     [SerializeField]
     private Vector2 moveVector;
     [SerializeField]
     private float speed = 2f;
+    [SerializeField]
+    private float runSpeed = 4f;
+    [SerializeField]
+    private float realSpeed;
+    private int clickTime;
+
 
     public float jumpForse = 300f;
     public int maxJumpValeu = 2;
-    [FormerlySerializedAs("jumpValueIteration")] [FormerlySerializedAs("jumpValueItatation")]
     public int maxAllowedJumpIteration = 60;
 
     public bool OnDown;
     public Transform DownTrig;
     public float checkRadius = 0.5f;
     public LayerMask paltformTrig;
-
-
-    [Header("Debug")]
-    [SerializeField]
-    private int jumpCount = 0;
-    [FormerlySerializedAs("jumpItaration")] [SerializeField]
     private int jumpIteration = 0;
+    private bool faceRight = true;
+    private bool lockLounge = false;
+    public Transform topCheck;
+    private float topCheckRadius;
+    public LayerMask Roof;
+    public Collider2D posseStand;
+    public Collider2D posseSquad;
+    private bool jumpLock = false;
+    private bool sqatLock = false;
+
+
+    private int jumpCount = 0;
+    [FormerlySerializedAs("jumpItaration")]
+
+
+    [SerializeField]
+    private int lungeImpulse = 5000;
 
     private void Start()
     {
@@ -35,24 +52,41 @@ public class MovePlayer : MonoBehaviour
     private void Update()
     {
         Walk();
+        Speed();
+        Reflect();
         Jump();
-        CheckDownTrig();
+        CheckPlatformTrig();
+        lunge();
+        sqatMove();
     }
 
     private void Walk()
     {
-        moveVector.x = Input.GetAxis("Horizontal");
-        rb.velocity = new Vector2(moveVector.x * speed, rb.velocity.y);
+        moveVector.x = Input.GetAxisRaw("Horizontal");
+        rb.linearVelocity = new Vector2(moveVector.x * realSpeed, rb.linearVelocity.y);
     }
 
-    private void CheckDownTrig()
+    private void Speed()
     {
-        OnDown = Physics2D.OverlapCircle(DownTrig.position, checkRadius, paltformTrig);
+        if (Input.GetKey(KeyCode.LeftShift)){realSpeed = runSpeed;}else{realSpeed = speed;} 
     }
+
+    void Reflect()
+    {
+        if((moveVector.x > 0 && !faceRight) || (moveVector.x < 0 && faceRight)){transform.localScale *= new Vector2(-1, 1); faceRight=!faceRight;}
+    }
+
+    private void CheckPlatformTrig(){OnDown = Physics2D.OverlapCircle(DownTrig.position, checkRadius, paltformTrig);}
+
 
     private void Jump()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && (OnDown || jumpCount < maxJumpValeu))
+        if (Input.GetKey(KeyCode.S))
+        {
+            Physics2D.IgnoreLayerCollision(7, 8, true);
+            Invoke("ignoreLaerOff", 1f);
+        }
+        if (Input.GetKeyDown(KeyCode.Space) && (OnDown || jumpCount < maxJumpValeu) && !jumpLock)
         {
             jumpCount++;
             rb.AddForce(Vector2.up * jumpForse);
@@ -64,12 +98,47 @@ public class MovePlayer : MonoBehaviour
             jumpIteration = 0;
         }
 
-        var jumpControl = Input.GetKeyDown(KeyCode.Space) && OnDown;
+        var jumpControl = Input.GetKeyDown(KeyCode.Space) && OnDown && !jumpLock;
 
         if (jumpControl && jumpIteration < maxAllowedJumpIteration)
         {
+            rb.linearVelocity = new Vector2 (rb.linearVelocity.x, 0);
             jumpIteration++;
             rb.AddForce(Vector2.up * (jumpForse / jumpIteration));
+        }
+    }
+
+    private void ignoreLaerOff(){Physics2D.IgnoreLayerCollision(7, 8, false);}
+
+   private void lunge()
+    {
+        if(Input.GetKey(KeyCode.F) && !lockLounge & !sqatLock)
+        {
+            sqatLock = true;
+            lockLounge =true;
+            Invoke ("loungeLock", 1f);
+            rb.linearVelocity = new Vector2 (0, 0);
+            if(transform.localScale.x < 0) {rb.AddForce(Vector2.left * lungeImpulse);}
+            else{rb.AddForce(Vector2.right * lungeImpulse);}
+        }
+    }
+
+    private void loungeLock(){lockLounge = false;}
+    private void sqatMove()
+    {
+        if(Input.GetKey(KeyCode.S))
+        {
+            transform.localScale = new Vector2(transform.localScale.x, 1);
+            posseStand.enabled = false;
+            posseSquad.enabled = true;
+            jumpLock = true;
+        }
+        else if(!Physics2D.OverlapCircle(topCheck.position, topCheckRadius, Roof))
+        {
+            transform.localScale = new Vector2(transform.localScale.x, 2);
+            posseStand.enabled = true;
+            posseSquad.enabled = false;
+            jumpLock = false;
         }
     }
 }
