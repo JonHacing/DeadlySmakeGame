@@ -1,14 +1,12 @@
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 public class MovePlayer : MonoBehaviour
 {
-    [SerializeField]
-    private Rigidbody2D rb;
-    [SerializeField]
-    private Vector2 moveVector;
-    [SerializeField]
-    private float speed = 2f;
+    [SerializeField] private Rigidbody2D rb;
+    [SerializeField] private Vector2 moveVector;
+    [SerializeField] private float speed = 2f;
     private int ClickTime;
 
 
@@ -28,17 +26,15 @@ public class MovePlayer : MonoBehaviour
     public LayerMask Roof;
     public Collider2D posseStand;
     public Collider2D posseSquad;
-    private bool jumpLock = false; 
+    private bool jumpLock = false;
     public Transform CheckLoader;
     public float checkRadiusLoaderTrig = 0.04f;
     public LayerMask laderMask;
     public bool chekedLader = false;
 
     private int jumpCount = 0;
-    [FormerlySerializedAs("jumpItaration")]
 
-
-    [SerializeField]
+    [FormerlySerializedAs("jumpItaration")] [SerializeField]
     private int lungeImpulse = 5000;
 
     private void Start()
@@ -52,9 +48,9 @@ public class MovePlayer : MonoBehaviour
         Reflect();
         Jump();
         CheckPlatformTrig();
-        lunge();
-        sqatMove();
-        ClumbLader ();
+        Lunge();
+        SqatMove();
+        ClimbLadder();
     }
 
     private void Walk()
@@ -64,9 +60,19 @@ public class MovePlayer : MonoBehaviour
     }
 
 
-    void Reflect() {if((moveVector.x > 0 && !faceRight) || (moveVector.x < 0 && faceRight)){transform.localScale *= new Vector2(-1, 1); faceRight=!faceRight;}}
+    void Reflect()
+    {
+        if ((moveVector.x > 0 && !faceRight) || (moveVector.x < 0 && faceRight))
+        {
+            transform.localScale *= new Vector2(-1, 1);
+            faceRight = !faceRight;
+        }
+    }
 
-    private void CheckPlatformTrig(){OnDown = Physics2D.OverlapCircle(DownTrig.position, checkRadius, paltformTrig);}
+    private void CheckPlatformTrig()
+    {
+        OnDown = Physics2D.OverlapCircle(DownTrig.position, checkRadius, paltformTrig);
+    }
 
 
     private void Jump()
@@ -74,8 +80,9 @@ public class MovePlayer : MonoBehaviour
         if (Input.GetKey(KeyCode.S))
         {
             Physics2D.IgnoreLayerCollision(7, 8, true);
-            Invoke("ignoreLaerOff", 1f);
+            Invoke(nameof(IgnoreLaerOff), 1f);
         }
+
         if (Input.GetKeyDown(KeyCode.Space) && (OnDown || jumpCount < maxJumpValeu) && !jumpLock)
         {
             jumpCount++;
@@ -92,31 +99,43 @@ public class MovePlayer : MonoBehaviour
 
         if (jumpControl && jumpIteration < maxAllowedJumpIteration)
         {
-            rb.linearVelocity = new Vector2 (rb.linearVelocity.x, 0);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0);
             jumpIteration++;
             rb.AddForce(Vector2.up * (jumpForse / jumpIteration));
         }
     }
 
-    private void ignoreLaerOff(){Physics2D.IgnoreLayerCollision(7, 8, false);}
-    
-   private void lunge()
+    private void IgnoreLaerOff()
     {
-        if(Input.GetKey(KeyCode.LeftShift) && !lockLounge)
-        { 
-            lockLounge =true;
-            Invoke ("loungeLock", 1f);
-            rb.linearVelocity = new Vector2 (0, 0);
-            if(transform.localScale.x < 0) {rb.AddForce(Vector2.left * lungeImpulse);}
-            else{rb.AddForce(Vector2.right * lungeImpulse);}
+        Physics2D.IgnoreLayerCollision(7, 8, false);
+    }
+
+    private void Lunge()
+    {
+        if (Input.GetKey(KeyCode.LeftShift) && !lockLounge)
+        {
+            lockLounge = true;
+            Invoke("LoungeLock", 1f);
+            rb.linearVelocity = new Vector2(0, 0);
+            if (transform.localScale.x < 0)
+            {
+                rb.AddForce(Vector2.left * lungeImpulse);
+            }
+            else
+            {
+                rb.AddForce(Vector2.right * lungeImpulse);
+            }
         }
     }
 
-    private void loungeLock(){lockLounge = false;}
-    private void sqatMove()
-    
+    private void LoungeLock()
     {
-        if(Input.GetKey(KeyCode.S))
+        lockLounge = false;
+    }
+
+    private void SqatMove()
+    {
+        if (Input.GetKey(KeyCode.S))
         {
             transform.localScale = new Vector2(transform.localScale.x, 1);
             posseStand.enabled = false;
@@ -131,14 +150,25 @@ public class MovePlayer : MonoBehaviour
             jumpLock = false;
         }
     }
-    private void OnTriggerEnter2D (Collider2D collision)
+
+    private void OnTriggerEnter2D(Collider2D collision)
     {
-        chekedLader = collision.gameObject.layer == 9;
+        chekedLader = IsLadder(collision);
     }
 
-    private void ClumbLader () 
+    private void OnTriggerExit2D(Collider2D other)
     {
-        if (chekedLader == true){gameObject.transform.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;}
-        else {gameObject.transform.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Dynamic;}
+        chekedLader = IsLadder(other);
+    }
+
+    private bool IsLadder(Collider2D collision)
+    {
+        return collision.gameObject.layer == 9;
+    }
+
+    private void ClimbLadder()
+    {
+        gameObject.transform.GetComponent<Rigidbody2D>().bodyType =
+            chekedLader ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
     }
 }
