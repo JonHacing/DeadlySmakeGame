@@ -3,18 +3,13 @@ using UnityEngine.Serialization;
 
 public class MovePlayer : MonoBehaviour
 {
-    private const bool V = true;
     [SerializeField]
     private Rigidbody2D rb;
     [SerializeField]
     private Vector2 moveVector;
     [SerializeField]
     private float speed = 2f;
-    [SerializeField]
-    private float runSpeed = 4f;
-    [SerializeField]
-    private float realSpeed;
-    private int clickTime;
+    private int ClickTime;
 
 
     public float jumpForse = 300f;
@@ -33,9 +28,11 @@ public class MovePlayer : MonoBehaviour
     public LayerMask Roof;
     public Collider2D posseStand;
     public Collider2D posseSquad;
-    private bool jumpLock = false;
-    private bool sqatLock = false;
-
+    private bool jumpLock = false; 
+    public Transform CheckLoader;
+    public float checkRadiusLoaderTrig = 0.04f;
+    public LayerMask laderMask;
+    public bool chekedLader = false;
 
     private int jumpCount = 0;
     [FormerlySerializedAs("jumpItaration")]
@@ -52,29 +49,22 @@ public class MovePlayer : MonoBehaviour
     private void Update()
     {
         Walk();
-        Speed();
         Reflect();
         Jump();
         CheckPlatformTrig();
         lunge();
         sqatMove();
+        ClumbLader ();
     }
 
     private void Walk()
     {
         moveVector.x = Input.GetAxisRaw("Horizontal");
-        rb.linearVelocity = new Vector2(moveVector.x * realSpeed, rb.linearVelocity.y);
+        rb.linearVelocity = new Vector2(moveVector.x * speed, rb.linearVelocity.y);
     }
 
-    private void Speed()
-    {
-        if (Input.GetKey(KeyCode.LeftShift)){realSpeed = runSpeed;}else{realSpeed = speed;} 
-    }
 
-    void Reflect()
-    {
-        if((moveVector.x > 0 && !faceRight) || (moveVector.x < 0 && faceRight)){transform.localScale *= new Vector2(-1, 1); faceRight=!faceRight;}
-    }
+    void Reflect() {if((moveVector.x > 0 && !faceRight) || (moveVector.x < 0 && faceRight)){transform.localScale *= new Vector2(-1, 1); faceRight=!faceRight;}}
 
     private void CheckPlatformTrig(){OnDown = Physics2D.OverlapCircle(DownTrig.position, checkRadius, paltformTrig);}
 
@@ -109,12 +99,11 @@ public class MovePlayer : MonoBehaviour
     }
 
     private void ignoreLaerOff(){Physics2D.IgnoreLayerCollision(7, 8, false);}
-
+    
    private void lunge()
     {
-        if(Input.GetKey(KeyCode.F) && !lockLounge & !sqatLock)
-        {
-            sqatLock = true;
+        if(Input.GetKey(KeyCode.LeftShift) && !lockLounge)
+        { 
             lockLounge =true;
             Invoke ("loungeLock", 1f);
             rb.linearVelocity = new Vector2 (0, 0);
@@ -125,6 +114,7 @@ public class MovePlayer : MonoBehaviour
 
     private void loungeLock(){lockLounge = false;}
     private void sqatMove()
+    
     {
         if(Input.GetKey(KeyCode.S))
         {
@@ -133,12 +123,22 @@ public class MovePlayer : MonoBehaviour
             posseSquad.enabled = true;
             jumpLock = true;
         }
-        else if(!Physics2D.OverlapCircle(topCheck.position, topCheckRadius, Roof))
+        else if (!Physics2D.OverlapCircle(topCheck.position, topCheckRadius, Roof))
         {
             transform.localScale = new Vector2(transform.localScale.x, 2);
             posseStand.enabled = true;
             posseSquad.enabled = false;
             jumpLock = false;
         }
+    }
+    private void OnTriggerEnter2D (Collider2D collision)
+    {
+        chekedLader = collision.gameObject.layer == 9;
+    }
+
+    private void ClumbLader () 
+    {
+        if (chekedLader == true){gameObject.transform.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;}
+        else {gameObject.transform.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Dynamic;}
     }
 }
