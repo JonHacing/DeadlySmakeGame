@@ -1,5 +1,7 @@
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 
 public class MovePlayer : MonoBehaviour
@@ -7,8 +9,6 @@ public class MovePlayer : MonoBehaviour
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private Vector2 moveVector;
     [SerializeField] private float speed = 2f;
-    private int ClickTime;
-
 
     public float jumpForse = 300f;
     public int maxJumpValeu = 2;
@@ -27,10 +27,9 @@ public class MovePlayer : MonoBehaviour
     public Collider2D posseStand;
     public Collider2D posseSquad;
     private bool jumpLock = false;
-    public Transform CheckLoader;
     public float checkRadiusLoaderTrig = 0.04f;
     public LayerMask laderMask;
-    public bool chekedLader = false;
+    [SerializeField] private bool chekedLader = false;
 
     private int jumpCount = 0;
 
@@ -153,22 +152,29 @@ public class MovePlayer : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        chekedLader = IsLadder(collision);
+        if (IsLadder(collision))
+            chekedLader = true;
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        chekedLader = IsLadder(other);
+        if (IsLadder(other))
+            chekedLader = false;
     }
 
-    private bool IsLadder(Collider2D collision)
+    private static bool IsLadder(Collider2D collision)
     {
         return collision.gameObject.layer == 9;
     }
 
     private void ClimbLadder()
     {
-        gameObject.transform.GetComponent<Rigidbody2D>().bodyType =
-            chekedLader ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
+        if (chekedLader == true && Input.GetKey(KeyCode.W))
+        {
+            rb.isKinematic = true;            
+            moveVector.y = Input.GetAxisRaw("Vertical");
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, moveVector.y * speed);
+        }
+        else{rb.isKinematic = false;}
     }
 }
